@@ -28,6 +28,8 @@ const GROUP = {
   equipment: { id: "equipment", name: "tokenActionHud.vagabond.equipment", type: "system" },
   skills:    { id: "skills",    name: "tokenActionHud.vagabond.skills",    type: "system" },
   saves:     { id: "saves",     name: "tokenActionHud.vagabond.saves",     type: "system" },
+  conditions:   { id: "conditions",   name: "tokenActionHud.vagabond.conditions",   type: "system" },
+  favorHinder:  { id: "favor-hinder",  name: "tokenActionHud.vagabond.favorHinder",  type: "system" },
   luck:      { id: "luck",      name: "tokenActionHud.vagabond.luck",       type: "system" },
   features:  { id: "features",  name: "tokenActionHud.vagabond.features",   type: "system" },
   combat:    { id: "combat",    name: "tokenActionHud.combat",             type: "system" },
@@ -115,8 +117,10 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
         id:     "utility",
         name:   coreModule.api.Utils.i18n("tokenActionHud.utility"),
         groups: [
-          { ...groups.luck,    nestId: "utility_luck"    },
-          { ...groups.combat,  nestId: "utility_combat"  },
+          { ...groups.favorHinder, nestId: "utility_favor-hinder" },
+          { ...groups.conditions,  nestId: "utility_conditions"  },
+          { ...groups.luck,        nestId: "utility_luck"         },
+          { ...groups.combat,      nestId: "utility_combat"       },
           { ...groups.utility, nestId: "utility_utility" },
         ]
       }
@@ -499,6 +503,8 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
       ]);
       this.#buildSkills();
       this.#buildSaves();
+      this.#buildFavorHinder();
+      this.#buildConditions();
       this.#buildLuck();
       this.#buildCombat();
       this.#buildUtility();
@@ -589,6 +595,51 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
       }));
 
       this.addActions(actions, { id: "features" });
+    }
+
+    /* -------------------------------------------- */
+
+    #buildFavorHinder() {
+      const actor = this.actor;
+      const current = actor?.system?.favorHinder ?? "none";
+      const states = { none: { label: "No Modifier", icon: "fas fa-minus" }, favor: { label: "Favored", icon: "fas fa-arrow-up" }, hinder: { label: "Hindered", icon: "fas fa-arrow-down" } };
+      const actions = Object.entries(states).map(([key, val]) => ({
+        id:       `favor-hinder-${key}`,
+        name:     val.label,
+        icon1:    `<i class='${val.icon}'></i>`,
+        cssClass: key === current ? "active" : "",
+        listName: val.label,
+        system:   { actionType: "utility", actionId: `setFavorHinder-${key}` }
+      }));
+      this.addActions(actions, { id: "favor-hinder" });
+    }
+
+    /* -------------------------------------------- */
+
+    #buildConditions() {
+      const actor = this.actor;
+      const effects = CONFIG.statusEffects ?? [];
+      if (!effects.length) return;
+
+      const activeIds = new Set(
+        (actor?.effects ?? [])
+          .filter(e => !e.disabled)
+          .flatMap(e => Array.from(e.statuses ?? []))
+      );
+
+      const actions = effects.map(effect => {
+        const isActive = activeIds.has(effect.id);
+        return {
+          id:       effect.id,
+          name:     game.i18n.localize(effect.name ?? effect.label ?? effect.id),
+          img:      effect.img ?? effect.icon,
+          cssClass: isActive ? "active" : "",
+          listName: game.i18n.localize(effect.name ?? effect.label ?? effect.id),
+          system:   { actionType: "condition", actionId: effect.id }
+        };
+      });
+
+      this.addActions(actions, { id: "conditions" });
     }
 
     /* -------------------------------------------- */
@@ -821,6 +872,8 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           await this.#rollSkill(event, actor, actionId); break;
         case "save":
           await this.#rollSave(event, actor, actionId); break;
+        case "condition":
+          await this.#toggleCondition(actor, token, actionId); break;
         case "utility":
           await this.#performUtility(event, actor, token, actionId); break;
       }
@@ -1002,11 +1055,27 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           await this.#modifyLuck(actor, -1); break;
         case "gainLuck":
           await this.#modifyLuck(actor, +1); break;
+        case "setFavorHinder-none":
+          await actor.update({ "system.favorHinder": "none" }); break;
+        case "setFavorHinder-favor":
+          await actor.update({ "system.favorHinder": "favor" }); break;
+        case "setFavorHinder-hinder":
+          await actor.update({ "system.favorHinder": "hinder" }); break;
       }
       Hooks.callAll("forceUpdateTokenActionHud");
     }
 
     /* -------------------------------------------- */
+
+    async #toggleCondition(actor, token, conditionId) {
+      if (!token) return;
+      try {
+        await actor.toggleStatusEffect(conditionId, { overlay: this.isRightClick });
+      } catch(err) {
+        console.error("TAH Vagabond | condition toggle failed:", err);
+      }
+      Hooks.callAll("forceUpdateTokenActionHud");
+    }
 
     async #modifyLuck(actor, delta) {
       const current = actor.system?.currentLuck ?? 0;

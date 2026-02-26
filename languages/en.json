@@ -18,5 +18,7 @@
   "tokenActionHud.vagabond.settings.showUnequippedWeapons.name": "Show Unequipped Weapons",
   "tokenActionHud.vagabond.settings.showUnequippedWeapons.hint": "Show weapons that are not currently equipped.",
   "tokenActionHud.vagabond.luck": "Luck",
-  "tokenActionHud.vagabond.features": "Features"
+  "tokenActionHud.vagabond.features": "Features",
+  "tokenActionHud.vagabond.conditions": "Conditions",
+  "tokenActionHud.vagabond.favorHinder": "Favor / Hinder"
 }
