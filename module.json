@@ -1,0 +1,50 @@
+{
+  "id": "token-action-hud-vagabond",
+  "title": "Token Action HUD - Vagabond",
+  "description": "Vagabond RPG system integration for Token Action HUD. Requires the Token Action HUD Core module.",
+  "authors": [
+    {
+      "name": "DimitroffVodka"
+    }
+  ],
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13"
+  },
+  "esmodules": [
+    "./scripts/token-action-hud-vagabond.js"
+  ],
+  "styles": [
+    "./styles/tah-vagabond.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "languages/en.json"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "vagabond",
+        "type": "system"
+      }
+    ],
+    "requires": [
+      {
+        "id": "token-action-hud-core",
+        "type": "module",
+        "compatibility": {
+          "minimum": "2.0"
+        }
+      }
+    ]
+  },
+  "socket": false,
+  "manifest": "https://raw.githubusercontent.com/DimitroffVodka/token-action-hud-vagabond/master/module.json",
+  "download": "https://github.com/DimitroffVodka/token-action-hud-vagabond/archive/refs/heads/master.zip",
+  "protected": false,
+  "library": false
+}

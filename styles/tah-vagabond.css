@@ -1,0 +1,95 @@
+.tah-vagabond-spell-dialog .window-content {
+  padding: 8px;
+  font-size: 13px;
+}
+
+.tah-spell-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-light-tertiary);
+  margin-bottom: 8px;
+}
+
+.tah-spell-section {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border-light-tertiary);
+}
+
+.tah-spell-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.tah-spell-row label {
+  flex: 0 0 100px;
+  font-weight: bold;
+}
+
+.tah-spell-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.tah-val {
+  min-width: 60px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.tah-highlight { color: var(--vagabond-c-damage-orange, #e07a00); }
+.tah-muted { color: var(--color-text-dark-secondary); font-size: 11px; }
+.tah-error { color: var(--color-level-error); }
+.tah-active { background: var(--color-button-active, #4a7a4a) !important; color: white !important; }
+
+.tah-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  background: var(--color-bg-btn);
+  cursor: pointer;
+  line-height: 1.4;
+}
+.tah-btn:hover { background: var(--color-bg-btn-hover); }
+.tah-btn:disabled { opacity: 0.4; cursor: default; }
+.tah-btn.disabled { opacity: 0.4; cursor: default; }
+
+.tah-cost-badge {
+  background: var(--color-bg-header);
+  border: 1px solid var(--color-border-light-tertiary);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+.tah-delivery-select {
+  flex: 1;
+}
+
+.tah-mana-summary {
+  font-size: 12px;
+}
+
+.tah-spell-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tah-cast-btn {
+  flex: 1;
+  padding: 5px;
+  font-weight: bold;
+  background: var(--color-bg-btn-primary, #4a4a8a);
+  color: var(--color-text-light-highlight, white);
+  border: none;
+}
+.tah-cast-btn:hover:not(:disabled) { background: var(--color-bg-btn-primary-hover, #5a5a9a); }
+.tah-cancel-btn { padding: 5px 12px; }

@@ -1,0 +1,22 @@
+{
+  "tokenActionHud.vagabond.weapons": "Weapons",
+  "tokenActionHud.vagabond.spells": "Spells",
+  "tokenActionHud.vagabond.perks": "Perks",
+  "tokenActionHud.vagabond.equipment": "Equipment",
+  "tokenActionHud.vagabond.stats": "Stats",
+  "tokenActionHud.vagabond.skills": "Skills",
+  "tokenActionHud.vagabond.saves": "Saves",
+  "tokenActionHud.vagabond.combatActions": "Combat Actions",
+  "tokenActionHud.vagabond.inventory": "Inventory",
+  "tokenActionHud.vagabond.attributes": "Attributes",
+  "tokenActionHud.vagabond.weapon": "Weapon",
+  "tokenActionHud.vagabond.spell": "Spell",
+  "tokenActionHud.vagabond.perk": "Perk",
+  "tokenActionHud.vagabond.stat": "Stat",
+  "tokenActionHud.vagabond.skill": "Skill",
+  "tokenActionHud.vagabond.save": "Save",
+  "tokenActionHud.vagabond.settings.showUnequippedWeapons.name": "Show Unequipped Weapons",
+  "tokenActionHud.vagabond.settings.showUnequippedWeapons.hint": "Show weapons that are not currently equipped.",
+  "tokenActionHud.vagabond.luck": "Luck",
+  "tokenActionHud.vagabond.features": "Features"
+}
