@@ -9,7 +9,7 @@ Add your own macros and Journal Entry and Roll Table compendiums.
 
 On Foundry VTT's Configuration and Setup screen, go to Add-on Modules
 Click Install Module
-In the Manifest URL field, paste: https://github.com/DimitroffVodka/token-action-hud-vagabond/releases/latest/download/module.json
+In the Manifest URL field, paste: https://raw.githubusercontent.com/DimitroffVodka/token-action-hud-vagabond/master/module.json
 Click Install next to the pasted Manifest URL
 Required Modules
 Token Action HUD Core
