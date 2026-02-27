@@ -599,6 +599,7 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     /* -------------------------------------------- */
 
     async #buildFeatures() {
+      try {
       const actor = this.actor;
       const classItem    = actor.items.find(i => i.type === "class");
       const ancestryItem = actor.items.find(i => i.type === "ancestry");
@@ -626,8 +627,11 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           system:   { actionType: "ancestryTrait", actionId: String(index) }
         }));
 
+      console.log("TAH | featureActions:", featureActions.length, "traitActions:", traitActions.length);
       if (featureActions.length) this.addActions(featureActions, { id: "features" });
       if (traitActions.length)   this.addActions(traitActions,   { id: "traits"   });
+      console.log("TAH | addActions called for both");
+      } catch(err) { console.error("TAH | buildFeatures error:", err); }
     }
 
     /* -------------------------------------------- */
