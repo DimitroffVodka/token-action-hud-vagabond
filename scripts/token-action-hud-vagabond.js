@@ -28,10 +28,13 @@ const GROUP = {
   equipment: { id: "equipment", name: "tokenActionHud.vagabond.equipment", type: "system" },
   skills:    { id: "skills",    name: "tokenActionHud.vagabond.skills",    type: "system" },
   saves:     { id: "saves",     name: "tokenActionHud.vagabond.saves",     type: "system" },
+  npcActions:   { id: "npc-actions",   name: "tokenActionHud.vagabond.npcActions",   type: "system" },
+  npcAbilities: { id: "npc-abilities", name: "tokenActionHud.vagabond.npcAbilities", type: "system" },
   conditions:   { id: "conditions",   name: "tokenActionHud.vagabond.conditions",   type: "system" },
   favorHinder:  { id: "favor-hinder",  name: "tokenActionHud.vagabond.favorHinder",  type: "system" },
   luck:      { id: "luck",      name: "tokenActionHud.vagabond.luck",       type: "system" },
   features:  { id: "features",  name: "tokenActionHud.vagabond.features",   type: "system" },
+  traits:    { id: "traits",    name: "tokenActionHud.vagabond.traits",     type: "system" },
   combat:    { id: "combat",    name: "tokenActionHud.combat",             type: "system" },
   utility:   { id: "utility",   name: "tokenActionHud.utility",            type: "system" },
 };
@@ -74,7 +77,7 @@ function shouldRollDamage(isHit) {
 
 let DEFAULTS = null;
 
-Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
+function buildDefaults(coreModule) {
   const groups = foundry.utils.deepClone(GROUP);
 
   Object.values(groups).forEach(group => {
@@ -82,8 +85,18 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     group.listName = `Group: ${group.name}`;
   });
 
-  DEFAULTS = {
+  return {
     layout: [
+      {
+        nestId: "npc",
+        id:     "npc",
+        name:   coreModule.api.Utils.i18n("tokenActionHud.vagabond.npc"),
+        groups: [
+          { ...groups.npcActions,   nestId: "npc_npc-actions"   },
+          { ...groups.npcAbilities, nestId: "npc_npc-abilities" },
+          { ...groups.conditions,   nestId: "npc_conditions"    },
+        ]
+      },
       {
         nestId: "combat-actions",
         id:     "combat-actions",
@@ -93,6 +106,7 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           { ...groups.spells,    nestId: "combat-actions_spells"    },
           { ...groups.perks,     nestId: "combat-actions_perks"     },
           { ...groups.features,  nestId: "combat-actions_features"  },
+          { ...groups.traits,    nestId: "combat-actions_traits"    },
         ]
       },
       {
@@ -127,7 +141,7 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     ],
     groups: Object.values(groups)
   };
-});
+}
 
 
 // ─── SPELL DIALOG ─────────────────────────────────────────────────────────────
@@ -482,7 +496,11 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
       }
 
       const type = this.actor?.type;
-      if (type === "character" || type === "npc") {
+      if (type === "npc") {
+        await this.#buildNPCActions();
+        await this.#buildNPCAbilities();
+        this.#buildConditions();
+      } else if (type === "character") {
         await this.#buildCharacterActions();
       } else if (!this.actor) {
         this.#buildSkills();
@@ -500,6 +518,7 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
         this.#buildSpells(),
         this.#buildPerks(),
         this.#buildEquipment(),
+        this.#buildFeatures(),
       ]);
       this.#buildSkills();
       this.#buildSaves();
@@ -580,21 +599,77 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     /* -------------------------------------------- */
 
     async #buildFeatures() {
-      // Ancestry and class items act as character features
-      const features = (this.items ?? []).filter(i =>
-        i.type === "ancestry" || i.type === "class"
-      );
-      if (!features.length) return;
+      const actor = this.actor;
+      const classItem    = actor.items.find(i => i.type === "class");
+      const ancestryItem = actor.items.find(i => i.type === "ancestry");
+      console.log("TAH | classItem:", classItem?.name, "features:", classItem?.system?.levelFeatures?.length);
+      console.log("TAH | ancestryItem:", ancestryItem?.name, "traits:", ancestryItem?.system?.traits?.length);
 
-      const actions = features.map(item => ({
-        id:       item.id,
-        name:     item.name,
-        img:      coreModule.api.Utils.getImage(item),
-        listName: item.name,
-        system:   { actionType: "feature", actionId: item.id }
-      }));
+      // Class features from levelFeatures array
+      const featureActions = (classItem?.system?.levelFeatures ?? [])
+        .filter(f => f?.name)
+        .map((f, index) => ({
+          id:       `class-feature-${index}`,
+          name:     f.name,
+          info1:    f.level ? { text: `Lvl ${f.level}`, title: "Level" } : null,
+          listName: f.name,
+          system:   { actionType: "classFeature", actionId: String(index) }
+        }));
 
-      this.addActions(actions, { id: "features" });
+      // Ancestry traits from traits array
+      const traitActions = (ancestryItem?.system?.traits ?? [])
+        .filter(t => t?.name)
+        .map((t, index) => ({
+          id:       `ancestry-trait-${index}`,
+          name:     t.name,
+          listName: t.name,
+          system:   { actionType: "ancestryTrait", actionId: String(index) }
+        }));
+
+      if (featureActions.length) this.addActions(featureActions, { id: "features" });
+      if (traitActions.length)   this.addActions(traitActions,   { id: "traits"   });
+    }
+
+    /* -------------------------------------------- */
+
+    async #buildNPCActions() {
+      const actions = Array.from(this.actor.system?.actions ?? []);
+      if (!actions.length) return;
+
+      const hudActions = actions
+        .filter(a => a != null)
+        .map((action, index) => {
+          const dmg = action.rollDamage || action.flatDamage || "";
+          const recharge = action.recharge ? `⟳${action.recharge}` : "";
+          return {
+            id:       `npc-action-${index}`,
+            name:     action.name || `Action ${index + 1}`,
+            info1:    dmg      ? { text: dmg,      title: "Damage"   } : null,
+            info2:    recharge ? { text: recharge, title: "Recharge" } : null,
+            listName: action.name,
+            system:   { actionType: "npcAction", actionId: String(index) }
+          };
+        });
+
+      this.addActions(hudActions, { id: "npc-actions" });
+    }
+
+    /* -------------------------------------------- */
+
+    async #buildNPCAbilities() {
+      const abilities = Array.from(this.actor.system?.abilities ?? []);
+      if (!abilities.length) return;
+
+      const hudActions = abilities
+        .filter(a => a != null)
+        .map((ability, index) => ({
+          id:       `npc-ability-${index}`,
+          name:     ability.name || `Ability ${index + 1}`,
+          listName: ability.name,
+          system:   { actionType: "npcAbility", actionId: String(index) }
+        }));
+
+      this.addActions(hudActions, { id: "npc-abilities" });
     }
 
     /* -------------------------------------------- */
@@ -619,6 +694,7 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     #buildConditions() {
       const actor = this.actor;
       const effects = CONFIG.statusEffects ?? [];
+      console.log("TAH Vagabond | buildConditions, effects:", effects.length, "actor:", actor?.name);
       if (!effects.length) return;
 
       const activeIds = new Set(
@@ -862,6 +938,10 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           await this.#rollWeapon(event, actor, actionId); break;
         case "spell":
           await this.#useSpell(actor, actionId); break;
+        case "classFeature":
+          await this.#postClassFeature(actor, actionId); break;
+        case "ancestryTrait":
+          await this.#postAncestryTrait(actor, actionId); break;
         case "feature":
         case "perk":
         case "equipment":
@@ -872,6 +952,10 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           await this.#rollSkill(event, actor, actionId); break;
         case "save":
           await this.#rollSave(event, actor, actionId); break;
+        case "npcAction":
+          await this.#postNPCAction(actor, actionId); break;
+        case "npcAbility":
+          await this.#postNPCAbility(actor, actionId); break;
         case "condition":
           await this.#toggleCondition(actor, token, actionId); break;
         case "utility":
@@ -1067,6 +1151,64 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
 
     /* -------------------------------------------- */
 
+    async #postClassFeature(actor, indexStr) {
+      const index = parseInt(indexStr);
+      const classItem = actor.items.find(i => i.type === "class");
+      const feature = classItem?.system?.levelFeatures?.[index];
+      if (!feature) return;
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor }),
+        flavor:  `<strong>${feature.name}</strong>${feature.level ? ` <em>(Level ${feature.level})</em>` : ""}`,
+        content: feature.description || "",
+      });
+    }
+
+    async #postAncestryTrait(actor, indexStr) {
+      const index = parseInt(indexStr);
+      const ancestryItem = actor.items.find(i => i.type === "ancestry");
+      const trait = ancestryItem?.system?.traits?.[index];
+      if (!trait) return;
+      ChatMessage.create({
+        speaker: ChatMessage.getSpeaker({ actor }),
+        flavor:  `<strong>${trait.name}</strong>`,
+        content: trait.description || "",
+      });
+    }
+
+    async #postNPCAction(actor, indexStr) {
+      const index = parseInt(indexStr);
+      const action = actor.system?.actions?.[index];
+      if (!action) return;
+
+      const targets = Array.from(game.user.targets).map(t => ({
+        tokenId: t.id, sceneId: t.scene.id,
+        actorId: t.actor?.id, actorName: t.name, actorImg: t.document.texture.src,
+      }));
+
+      try {
+        const { VagabondChatCard } = globalThis.vagabond.utils;
+        await VagabondChatCard.npcAction(actor, action, index, targets);
+      } catch(err) {
+        console.error("TAH Vagabond | NPC action post failed:", err);
+      }
+      Hooks.callAll("forceUpdateTokenActionHud");
+    }
+
+    async #postNPCAbility(actor, indexStr) {
+      const index = parseInt(indexStr);
+      const ability = actor.system?.abilities?.[index];
+      if (!ability) return;
+
+      try {
+        const { VagabondChatCard } = globalThis.vagabond.utils;
+        // Abilities use npcAction under the hood (same chat card)
+        await VagabondChatCard.npcAction(actor, ability, index);
+      } catch(err) {
+        console.error("TAH Vagabond | NPC ability post failed:", err);
+      }
+      Hooks.callAll("forceUpdateTokenActionHud");
+    }
+
     async #toggleCondition(actor, token, conditionId) {
       if (!token) return;
       try {
@@ -1145,7 +1287,9 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
 
     /** @override */
     async registerDefaults() {
-      return DEFAULTS;
+      const defaults = buildDefaults(coreModule);
+      console.log("TAH Vagabond | registerDefaults groups:", defaults.groups.map(g => g.id));
+      return defaults;
     }
   };
 });

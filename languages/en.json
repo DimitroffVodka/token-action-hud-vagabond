@@ -20,5 +20,9 @@
   "tokenActionHud.vagabond.luck": "Luck",
   "tokenActionHud.vagabond.features": "Features",
   "tokenActionHud.vagabond.conditions": "Conditions",
-  "tokenActionHud.vagabond.favorHinder": "Favor / Hinder"
+  "tokenActionHud.vagabond.favorHinder": "Favor / Hinder",
+  "tokenActionHud.vagabond.npc": "NPC",
+  "tokenActionHud.vagabond.npcActions": "Actions",
+  "tokenActionHud.vagabond.npcAbilities": "Abilities",
+  "tokenActionHud.vagabond.traits": "Traits"
 }
