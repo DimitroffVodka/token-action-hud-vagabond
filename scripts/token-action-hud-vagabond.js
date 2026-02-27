@@ -662,6 +662,17 @@ class VagabondSpellDialog extends foundry.applications.api.ApplicationV2 {
       spellState: state, costs, deliveryText,
     }, damageRoll, targets);
 
+    // ── Sequencer FX ─────────────────────────────────────────────────────────
+    try {
+      const { VagabondSpellSequencer } = await import("/systems/vagabond/module/helpers/spell-sequencer.mjs");
+      const casterToken = actor.token?.object ?? actor.getActiveTokens(true)[0];
+      const liveTargets = Array.from(game.user.targets);
+      VagabondSpellSequencer.play(spell, state.deliveryType, state.deliveryIncrease, casterToken, liveTargets);
+    } catch(err) {
+      console.warn("TAH Vagabond | SpellSequencer error (non-fatal):", err);
+    }
+    // ── End Sequencer FX ─────────────────────────────────────────────────────
+
     // Reset state (keep delivery)
     this.spellState.damageDice = 1;
     this.spellState.deliveryIncrease = 0;
