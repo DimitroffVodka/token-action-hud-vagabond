@@ -316,6 +316,17 @@ class VagabondSpellDialog extends foundry.applications.api.ApplicationV2 {
             <button type="button" class="tah-btn tah-inc-up" ${!canIncrease ? "disabled" : ""}>+</button>
           </div>
           <span class="tah-cost-badge">+${costs.deliveryBaseCost + costs.deliveryIncreaseCost}</span>
+        </div>
+        <div class="tah-spell-row">
+          <label>Template</label>
+          <div class="tah-spell-controls">
+            <button type="button" class="tah-btn tah-preview-btn ${s.previewActive ? "tah-active" : ""}" title="Toggle preview on canvas">
+              <i class="fas fa-eye"></i> ${s.previewActive ? "Preview On" : "Preview Off"}
+            </button>
+            <button type="button" class="tah-btn tah-place-template-btn" title="Place persistent template on canvas">
+              <i class="fas fa-ruler-combined"></i> Place
+            </button>
+          </div>
         </div>` : ""}
       </div>
 
@@ -345,12 +356,14 @@ class VagabondSpellDialog extends foundry.applications.api.ApplicationV2 {
   _attachFrameListeners() {
     super._attachFrameListeners();
 
-    this.element.addEventListener("change", e => {
+    this.element.addEventListener("change", async e => {
       if (e.target.classList.contains("tah-delivery-select")) {
         this.spellState.deliveryType = e.target.value || null;
         this.spellState.deliveryIncrease = 0;
+        this.spellState.previewActive = false;
         this.#saveState();
         this.render();
+        await this.#clearPreview();
       }
     });
 
@@ -374,15 +387,160 @@ class VagabondSpellDialog extends foundry.applications.api.ApplicationV2 {
       } else if (btn.classList.contains("tah-inc-up")) {
         this.spellState.deliveryIncrease++;
         this.#saveState(); this.render();
+        await this.#refreshPreview();
       } else if (btn.classList.contains("tah-inc-down")) {
         if (this.spellState.deliveryIncrease > 0) this.spellState.deliveryIncrease--;
         this.#saveState(); this.render();
+        await this.#refreshPreview();
+      } else if (btn.classList.contains("tah-preview-btn")) {
+        this.spellState.previewActive = !this.spellState.previewActive;
+        this.#saveState(); this.render();
+        await this.#refreshPreview();
+      } else if (btn.classList.contains("tah-place-template-btn")) {
+        await this.#placeTemplate();
       } else if (btn.classList.contains("tah-cast-btn") && !btn.disabled) {
         await this.#cast(e);
       } else if (btn.classList.contains("tah-cancel-btn")) {
         this.close();
       }
     });
+  }
+
+  async #clearPreview() {
+    const mgr = globalThis.vagabond?.managers?.templates;
+    if (mgr) await mgr.clearPreview(this.actor.id, this.spell.id);
+  }
+
+  async #refreshPreview() {
+    const s = this.spellState;
+    if (!s.previewActive || !s.deliveryType) { await this.#clearPreview(); return; }
+    const base = CONFIG.VAGABOND.deliveryBaseRanges[s.deliveryType];
+    const inc  = CONFIG.VAGABOND.deliveryIncrement[s.deliveryType];
+    const dist = base?.value ? base.value + inc * s.deliveryIncrease : 0;
+    if (!dist) { await this.#clearPreview(); return; }
+
+    // For sphere/cube, the system requires a target to position the template.
+    // If no target is selected, temporarily use the caster token as the target.
+    const needsTarget = ['sphere', 'cube'].includes(s.deliveryType);
+    const hasTarget = game.user.targets.size > 0;
+    let tempTarget = null;
+
+    if (needsTarget && !hasTarget) {
+      const token = this.actor.token?.object || this.actor.getActiveTokens()[0];
+      if (token) {
+        // Temporarily target own token
+        token.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: false });
+        tempTarget = token;
+      }
+    }
+
+    try {
+      const mgr = globalThis.vagabond?.managers?.templates;
+      if (mgr) await mgr.updatePreview(this.actor, this.spell.id, s.deliveryType, dist);
+    } finally {
+      // Remove the temporary self-target
+      if (tempTarget) {
+        tempTarget.setTarget(false, { user: game.user, releaseOthers: false, groupSelection: false });
+      }
+    }
+  }
+
+  async #placeTemplate() {
+    const s = this.spellState;
+    if (!s.deliveryType) { ui.notifications.warn("Select a delivery type first!"); return; }
+
+    const noTemplate = ['touch', 'remote', 'imbue', 'glyph'];
+    if (noTemplate.includes(s.deliveryType)) {
+      ui.notifications.info(`${s.deliveryType} delivery does not use an area template.`);
+      return;
+    }
+
+    // If a preview exists, just strip the preview flag to make it permanent
+    const mgr = globalThis.vagabond?.managers?.templates;
+    const key = `${this.actor.id}-${this.spell.id}`;
+    const previewId = mgr?.activePreviews?.get(key);
+
+    if (previewId) {
+      const template = canvas.scene.templates.get(previewId);
+      if (template) {
+        // Remove the preview flag — template stays exactly where it is
+        await template.update({ "flags.vagabond.isPreview": false });
+        mgr.activePreviews.delete(key);
+        // Turn off preview state so the button updates
+        this.spellState.previewActive = false;
+        this.#saveState();
+        this.render();
+        ui.notifications.info(`Template placed.`);
+        return;
+      }
+    }
+
+    // No preview exists — create a fresh template from caster position
+    const base = CONFIG.VAGABOND.deliveryBaseRanges[s.deliveryType];
+    const inc  = CONFIG.VAGABOND.deliveryIncrement[s.deliveryType];
+    const dist = base?.value ? base.value + inc * s.deliveryIncrease : 0;
+    if (!dist) return;
+
+    const actor = this.actor;
+    const token = actor.token?.object || actor.getActiveTokens()[0];
+    const templateData = {
+      distance: dist,
+      fillColor: game.user.color || '#FF0000',
+      direction: token?.document?.rotation || 0,
+      flags: { vagabond: { spellId: this.spell.id, actorId: actor.id } }
+    };
+
+    switch (s.deliveryType) {
+      case 'aura':
+        templateData.t = 'circle';
+        templateData.x = token?.center?.x ?? 0;
+        templateData.y = token?.center?.y ?? 0;
+        break;
+      case 'cone':
+        templateData.t = 'cone';
+        templateData.angle = 90;
+        templateData.x = token?.center?.x ?? 0;
+        templateData.y = token?.center?.y ?? 0;
+        break;
+      case 'line':
+        templateData.t = 'ray';
+        templateData.width = canvas.scene?.grid?.distance ?? 5;
+        templateData.x = token?.center?.x ?? 0;
+        templateData.y = token?.center?.y ?? 0;
+        break;
+      case 'sphere': {
+        templateData.t = 'circle';
+        const tgt = game.user.targets.first();
+        templateData.x = tgt?.center?.x ?? token?.center?.x ?? 0;
+        templateData.y = tgt?.center?.y ?? token?.center?.y ?? 0;
+        break;
+      }
+      case 'cube': {
+        const side = dist;
+        templateData.t = 'rect';
+        templateData.distance = side * Math.sqrt(2);
+        templateData.direction = 45;
+        const tgt2 = game.user.targets.first();
+        const cx = tgt2?.center?.x ?? token?.center?.x ?? 0;
+        const cy = tgt2?.center?.y ?? token?.center?.y ?? 0;
+        const gridPx = canvas.grid?.size ?? 100;
+        const gridDist = canvas.scene?.grid?.distance ?? 5;
+        const sidePx = (side / gridDist) * gridPx;
+        templateData.x = cx - sidePx / 2;
+        templateData.y = cy - sidePx / 2;
+        break;
+      }
+      default:
+        ui.notifications.warn(`No template for delivery type: ${s.deliveryType}`);
+        return;
+    }
+
+    try {
+      await canvas.scene.createEmbeddedDocuments('MeasuredTemplate', [templateData]);
+      ui.notifications.info(`Template placed.`);
+    } catch(err) {
+      console.error("TAH Vagabond | Template placement failed:", err);
+    }
   }
 
   async #cast(event) {
@@ -466,8 +624,10 @@ class VagabondSpellDialog extends foundry.applications.api.ApplicationV2 {
     this.spellState.damageDice = 1;
     this.spellState.deliveryIncrease = 0;
     this.spellState.useFx = spell.system?.damageType === "-";
+    this.spellState.previewActive = false;
     this.#saveState();
 
+    await this.#clearPreview();
     await this.close();
     Hooks.callAll("forceUpdateTokenActionHud");
   }
@@ -599,7 +759,6 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
     /* -------------------------------------------- */
 
     async #buildFeatures() {
-      try {
       const actor = this.actor;
       const classItem    = actor.items.find(i => i.type === "class");
       const ancestryItem = actor.items.find(i => i.type === "ancestry");
@@ -627,11 +786,8 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
           system:   { actionType: "ancestryTrait", actionId: String(index) }
         }));
 
-      console.log("TAH | featureActions:", featureActions.length, "traitActions:", traitActions.length);
       if (featureActions.length) this.addActions(featureActions, { id: "features" });
       if (traitActions.length)   this.addActions(traitActions,   { id: "traits"   });
-      console.log("TAH | addActions called for both");
-      } catch(err) { console.error("TAH | buildFeatures error:", err); }
     }
 
     /* -------------------------------------------- */
@@ -1299,6 +1455,20 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
 });
 
 // ─── ENTRY POINT ──────────────────────────────────────────────────────────────
+
+Hooks.once("ready", async () => {
+  const LAYOUT_PATH = "modules/token-action-hud-vagabond/token-action-hud-layout.json";
+  try {
+    const current = game.settings.get("token-action-hud-core", "customLayout");
+    // Always point to our layout file if it's not already set to it
+    if (current !== LAYOUT_PATH) {
+      await game.settings.set("token-action-hud-core", "customLayout", LAYOUT_PATH);
+      console.log("TAH Vagabond | Set default layout path:", LAYOUT_PATH);
+    }
+  } catch(err) {
+    console.warn("TAH Vagabond | Could not set default layout:", err);
+  }
+});
 
 Hooks.on("tokenActionHudCoreApiReady", async () => {
   const module = game.modules.get(MODULE_ID);
