@@ -88,31 +88,37 @@ function buildDefaults(coreModule) {
   return {
     layout: [
       {
-        nestId: "npc",
-        id:     "npc",
-        name:   coreModule.api.Utils.i18n("tokenActionHud.vagabond.npc"),
+        nestId: "actions",
+        id:     "actions",
+        name:   "Actions",
+        type:   "custom",
         groups: [
-          { ...groups.npcActions,   nestId: "npc_npc-actions"   },
-          { ...groups.npcAbilities, nestId: "npc_npc-abilities" },
-          { ...groups.conditions,   nestId: "npc_conditions"    },
+          { ...groups.npcActions, nestId: "actions_npc-actions" },
         ]
       },
       {
-        nestId: "combat-actions",
-        id:     "combat-actions",
-        name:   coreModule.api.Utils.i18n("tokenActionHud.vagabond.combatActions"),
+        nestId: "weapons",
+        id:     "weapons",
+        name:   "Weapons",
+        type:   "custom",
         groups: [
-          { ...groups.weapons,   nestId: "combat-actions_weapons"   },
-          { ...groups.spells,    nestId: "combat-actions_spells"    },
-          { ...groups.perks,     nestId: "combat-actions_perks"     },
-          { ...groups.features,  nestId: "combat-actions_features"  },
-          { ...groups.traits,    nestId: "combat-actions_traits"    },
+          { ...groups.weapons, nestId: "weapons_weapons" },
+        ]
+      },
+      {
+        nestId: "spells",
+        id:     "spells",
+        name:   "Spells",
+        type:   "custom",
+        groups: [
+          { ...groups.spells, nestId: "spells_spells" },
         ]
       },
       {
         nestId: "inventory",
         id:     "inventory",
-        name:   coreModule.api.Utils.i18n("tokenActionHud.vagabond.inventory"),
+        name:   "Inventory",
+        type:   "custom",
         groups: [
           { ...groups.equipment, nestId: "inventory_equipment" },
         ]
@@ -120,24 +126,60 @@ function buildDefaults(coreModule) {
       {
         nestId: "attributes",
         id:     "attributes",
-        name:   coreModule.api.Utils.i18n("tokenActionHud.vagabond.attributes"),
+        name:   "Attributes",
+        type:   "custom",
         groups: [
           { ...groups.skills, nestId: "attributes_skills" },
           { ...groups.saves,  nestId: "attributes_saves"  },
         ]
       },
       {
-        nestId: "utility",
-        id:     "utility",
-        name:   coreModule.api.Utils.i18n("tokenActionHud.utility"),
+        nestId: "dice",
+        id:     "dice",
+        name:   "Dice",
+        type:   "custom",
         groups: [
-          { ...groups.favorHinder, nestId: "utility_favor-hinder" },
-          { ...groups.conditions,  nestId: "utility_conditions"  },
-          { ...groups.luck,        nestId: "utility_luck"         },
-          { ...groups.combat,      nestId: "utility_combat"       },
-          { ...groups.utility, nestId: "utility_utility" },
+          { ...groups.favorHinder, nestId: "dice_favor-hinder" },
+          { ...groups.luck,        nestId: "dice_luck"         },
         ]
-      }
+      },
+      {
+        nestId: "conditions",
+        id:     "conditions",
+        name:   "Conditions",
+        type:   "custom",
+        groups: [
+          { ...groups.conditions, nestId: "conditions_conditions" },
+        ]
+      },
+      {
+        nestId: "class",
+        id:     "class",
+        name:   "Class",
+        type:   "custom",
+        groups: [
+          { ...groups.features,     nestId: "class_features"      },
+          { ...groups.npcAbilities, nestId: "class_npc-abilities" },
+        ]
+      },
+      {
+        nestId: "perks",
+        id:     "perks",
+        name:   "Perks",
+        type:   "custom",
+        groups: [
+          { ...groups.perks, nestId: "perks_perks" },
+        ]
+      },
+      {
+        nestId: "ancestry",
+        id:     "ancestry",
+        name:   "Ancestry",
+        type:   "custom",
+        groups: [
+          { ...groups.traits, nestId: "ancestry_traits" },
+        ]
+      },
     ],
     groups: Object.values(groups)
   };
@@ -1456,17 +1498,27 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
 
 // ─── ENTRY POINT ──────────────────────────────────────────────────────────────
 
-Hooks.once("ready", async () => {
-  const LAYOUT_PATH = "modules/token-action-hud-vagabond/token-action-hud-layout.json";
+Hooks.once("tokenActionHudCoreApiReady", async () => {
+  // On first load, seed the user layout file via TAH Core's own data handler
+  // so the correct default layout is shown without needing a manual reset.
   try {
-    const current = game.settings.get("token-action-hud-core", "customLayout");
-    // Always point to our layout file if it's not already set to it
-    if (current !== LAYOUT_PATH) {
-      await game.settings.set("token-action-hud-core", "customLayout", LAYOUT_PATH);
-      console.log("TAH Vagabond | Set default layout path:", LAYOUT_PATH);
-    }
+    const dataHandler = game.tokenActionHud?.dataHandler;
+    if (!dataHandler) return;
+
+    // Check if a user layout file already exists
+    await dataHandler.getFilePathsAsGm?.();
+    const existing = await dataHandler.getData({ type: "user", id: game.userId });
+    if (existing && Object.keys(existing).length > 0) return; // already has a layout
+
+    const LAYOUT_PATH = "modules/token-action-hud-vagabond/token-action-hud-layout.json";
+    const response = await fetch(LAYOUT_PATH + "?v=" + Date.now());
+    if (!response.ok) return;
+    const layoutData = await response.json();
+
+    await dataHandler.saveDataAsGm("user", game.userId, layoutData);
+    console.log("TAH Vagabond | Default layout seeded for user", game.userId);
   } catch(err) {
-    console.warn("TAH Vagabond | Could not set default layout:", err);
+    console.warn("TAH Vagabond | Could not seed default layout:", err);
   }
 });
 
