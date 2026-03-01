@@ -72,4 +72,4 @@ Make rolls, use items, cast spells, and manage conditions directly from the HUD 
 
 Created by **DimitroffVodka**
 
-Built for the [Vagabond RPG](https://matthewcolville.itch.io/vagabond) by Matthew Colville & MCDM Productions.
+Built for the [Vagabond RPG](https://landoftheblind.myshopify.com/) by Land of the Blind.
