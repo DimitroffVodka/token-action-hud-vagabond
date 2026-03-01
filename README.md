@@ -1,6 +1,6 @@
 # Token Action HUD - Vagabond
 
-A [Token Action HUD Core](https://github.com/Larkinabout/fvtt-token-action-hud-core) integration for the [Vagabond RPG](https://matthewcolville.itch.io/vagabond) system on Foundry VTT.
+A [Token Action HUD Core](https://github.com/Larkinabout/fvtt-token-action-hud-core) integration for the [Vagabond RPG](https://github.com/mordachai/vagabond) system on Foundry VTT.
 
 Make rolls, use items, cast spells, and manage conditions directly from the HUD — without ever opening your character sheet.
 
