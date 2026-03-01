@@ -92,6 +92,7 @@ function buildDefaults(coreModule) {
         id:     "actions",
         name:   "Actions",
         type:   "custom",
+        image:  "icons/creatures/magical/construct-iron-stomping-yellow.webp",
         groups: [
           { ...groups.npcActions, nestId: "actions_npc-actions" },
         ]
@@ -101,6 +102,7 @@ function buildDefaults(coreModule) {
         id:     "weapons",
         name:   "Weapons",
         type:   "custom",
+        image:  "icons/weapons/swords/greatsword-crossguard-blue.webp",
         groups: [
           { ...groups.weapons, nestId: "weapons_weapons" },
         ]
@@ -110,6 +112,7 @@ function buildDefaults(coreModule) {
         id:     "spells",
         name:   "Spells",
         type:   "custom",
+        image:  "icons/magic/fire/beam-jet-stream-embers.webp",
         groups: [
           { ...groups.spells, nestId: "spells_spells" },
         ]
@@ -119,6 +122,7 @@ function buildDefaults(coreModule) {
         id:     "inventory",
         name:   "Inventory",
         type:   "custom",
+        image:  "icons/containers/bags/case-simple-brown.webp",
         groups: [
           { ...groups.equipment, nestId: "inventory_equipment" },
         ]
@@ -128,6 +132,7 @@ function buildDefaults(coreModule) {
         id:     "attributes",
         name:   "Attributes",
         type:   "custom",
+        image:  "icons/skills/trades/academics-book-study-purple.webp",
         groups: [
           { ...groups.skills, nestId: "attributes_skills" },
           { ...groups.saves,  nestId: "attributes_saves"  },
@@ -138,6 +143,7 @@ function buildDefaults(coreModule) {
         id:     "dice",
         name:   "Dice",
         type:   "custom",
+        image:  "icons/sundries/gaming/dice-pair-white-green.webp",
         groups: [
           { ...groups.favorHinder, nestId: "dice_favor-hinder" },
           { ...groups.luck,        nestId: "dice_luck"         },
@@ -148,6 +154,7 @@ function buildDefaults(coreModule) {
         id:     "conditions",
         name:   "Conditions",
         type:   "custom",
+        image:  "icons/magic/holy/yin-yang-balance-symbol.webp",
         groups: [
           { ...groups.conditions, nestId: "conditions_conditions" },
         ]
@@ -157,6 +164,7 @@ function buildDefaults(coreModule) {
         id:     "class",
         name:   "Class",
         type:   "custom",
+        image:  "icons/magic/holy/chalice-glowing-yellow-blue.webp",
         groups: [
           { ...groups.features,     nestId: "class_features"      },
           { ...groups.npcAbilities, nestId: "class_npc-abilities" },
@@ -167,6 +175,7 @@ function buildDefaults(coreModule) {
         id:     "perks",
         name:   "Perks",
         type:   "custom",
+        image:  "icons/sundries/documents/blueprint-helmet.webp",
         groups: [
           { ...groups.perks, nestId: "perks_perks" },
         ]
@@ -176,6 +185,7 @@ function buildDefaults(coreModule) {
         id:     "ancestry",
         name:   "Ancestry",
         type:   "custom",
+        image:  "icons/skills/social/diplomacy-unity-alliance.webp",
         groups: [
           { ...groups.traits, nestId: "ancestry_traits" },
         ]
