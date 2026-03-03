@@ -43,7 +43,7 @@
     ]
   },
   "socket": false,
-  "manifest": "https://raw.githubusercontent.com/DimitroffVodka/token-action-hud-vagabond/master/module.json",
+  "manifest": "https://github.com/DimitroffVodka/token-action-hud-vagabond/releases/latest/download/module.json",
   "download": "https://github.com/DimitroffVodka/token-action-hud-vagabond/releases/download/1.0.0/module.zip",
   "protected": false,
   "library": false
