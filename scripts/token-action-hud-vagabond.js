@@ -1207,6 +1207,16 @@ Hooks.once("tokenActionHudCoreApiReady", async coreModule => {
         const attackResult = await item.rollAttack(actor, favorHinder);
         if (!attackResult) return;
 
+        // Play item FX — import directly from the system module to match roll-handler.mjs
+        try {
+          const { VagabondItemSequencer } = await import("/systems/vagabond/module/helpers/item-sequencer.mjs");
+          const casterToken = actor.token?.object ?? actor.getActiveTokens(true)[0] ?? null;
+          const targetTokens = Array.from(game.user.targets);
+          VagabondItemSequencer.play(item, casterToken, targetTokens, attackResult.isHit);
+        } catch (fxErr) {
+          console.warn("TAH Vagabond | item FX error (non-fatal):", fxErr);
+        }
+
         let damageRoll = null;
         if (shouldRollDamage(attackResult.isHit)) {
           damageRoll = await item.rollDamage(
